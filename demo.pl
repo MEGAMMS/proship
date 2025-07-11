@@ -21,8 +21,7 @@ clear :-
     retractall(col_count(_, _)),
     retractall(grid_size(_, _)).
 
-% --- Initialize the puzzle with facts
-initialize :-
+load_game(1) :-
     clear,
     assert(grid_size(3, 3)),
     assert(row_count(1, 2)),
@@ -32,14 +31,63 @@ initialize :-
     assert(col_count(2, 1)),
     assert(col_count(3, 0)),
     assert(cell(1, 1, ship)),
+    assert(cell(1, 2, ship)).
+
+load_game(2) :-
+    clear,
+    assert(grid_size(4, 4)),
+    assert(row_count(1, 2)),
+    assert(row_count(2, 0)),
+    assert(row_count(3, 1)),
+    assert(row_count(4, 1)),
+    assert(col_count(1, 1)),
+    assert(col_count(2, 2)),
+    assert(col_count(3, 0)),
+    assert(col_count(4, 1)),
     assert(cell(1, 2, ship)),
-    assert(cell(1, 3, water)),
+    assert(cell(1, 3, ship)),
+    assert(cell(3, 4, ship)),
+    assert(cell(4, 1, ship)).
+
+% --- Initialize the puzzle with facts
+initialize :-
+    clear,
+    load_game(1),
     print_board.
 
 % --- Print the current board state
 print_board :-
     grid_size(Rows, Cols),
-    print_rows(1, Rows, Cols).
+    write('  '),
+    print_col_headers(1, Cols), nl,
+    print_rows_with_counts(1, Rows, Cols),
+    write('  '),
+    print_col_counts(1, Cols), nl.
+
+print_col_headers(Col, MaxCol) :-
+    Col > MaxCol, !.
+print_col_headers(Col, MaxCol) :-
+    write(' '), write(Col), write(' '),
+    Next is Col + 1,
+    print_col_headers(Next, MaxCol).
+
+print_rows_with_counts(Row, MaxRow, _) :-
+    Row > MaxRow, !.
+print_rows_with_counts(Row, MaxRow, Cols) :-
+    write(Row), write(' '),
+    print_columns(Row, 1, Cols),
+    write(' | '),
+    row_count(Row, Count), write(Count), nl,
+    Next is Row + 1,
+    print_rows_with_counts(Next, MaxRow, Cols).
+
+print_col_counts(Col, MaxCol) :-
+    Col > MaxCol, !.
+print_col_counts(Col, MaxCol) :-
+    col_count(Col, Count),
+    write(' '), write(Count), write(' '),
+    Next is Col + 1,
+    print_col_counts(Next, MaxCol).
 
 print_rows(Row, MaxRow, _) :-
     Row > MaxRow, !.
@@ -64,7 +112,6 @@ print_cell(Row, Col) :-
 	write(' ~ '), !.
 print_cell(_, _) :-
 	write(' . ').
-
 
 
 % Base case: passed the last column
@@ -127,7 +174,6 @@ validate_rows_and_cols :-
     grid_size(MaxRow, MaxCol),
     validate_rows(1, MaxRow),
     validate_cols(1, MaxCol).
-
 
 
 adjacent_delta(-1, -1).
