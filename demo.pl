@@ -52,9 +52,9 @@ load_game(2) :-
     assert(cell(4, 1, ship)).
 
 % --- Initialize the puzzle with facts
-initialize :-
+initialize(Game) :-
     clear,
-    load_game(1),
+    load_game(Game),
     print_board.
 
 % --- Print the current board state
