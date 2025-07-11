@@ -25,14 +25,16 @@ clear :-
 initialize :-
     clear,
     assert(grid_size(3, 3)),
-    assert(row_count(1, 1)),
+    assert(row_count(1, 2)),
     assert(row_count(2, 0)),
     assert(row_count(3, 0)),
     assert(col_count(1, 1)),
-    assert(col_count(2, 0)),
+    assert(col_count(2, 1)),
     assert(col_count(3, 0)),
     assert(cell(1, 1, ship)),
-    assert(cell(1, 2, water)).
+    assert(cell(1, 2, ship)),
+    assert(cell(1, 3, water)),
+    print_board.
 
 % --- Print the current board state
 print_board :-
