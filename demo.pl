@@ -21,6 +21,7 @@ clear :-
     retractall(col_count(_, _)),
     retractall(grid_size(_, _)).
 
+% --- sample game
 load_game(1) :-
     clear,
     assert(grid_size(3, 3)),
@@ -33,6 +34,7 @@ load_game(1) :-
     assert(cell(1, 1, ship)),
     assert(cell(1, 2, ship)).
 
+% --- sample game 2
 load_game(2) :-
     clear,
     assert(grid_size(4, 4)),
@@ -64,6 +66,7 @@ print_board :-
     write('  '),
     print_col_counts(1, Cols), nl.
 
+% --- Print Columns' headers
 print_col_headers(Col, MaxCol) :-
     Col > MaxCol, !.
 print_col_headers(Col, MaxCol) :-
@@ -71,6 +74,7 @@ print_col_headers(Col, MaxCol) :-
     Next is Col + 1,
     print_col_headers(Next, MaxCol).
 
+% --- Print Rows with count
 print_rows_with_counts(Row, MaxRow, _) :-
     Row > MaxRow, !.
 print_rows_with_counts(Row, MaxRow, Cols) :-
@@ -81,6 +85,7 @@ print_rows_with_counts(Row, MaxRow, Cols) :-
     Next is Row + 1,
     print_rows_with_counts(Next, MaxRow, Cols).
 
+% --- Print Columns' count
 print_col_counts(Col, MaxCol) :-
     Col > MaxCol, !.
 print_col_counts(Col, MaxCol) :-
@@ -89,6 +94,7 @@ print_col_counts(Col, MaxCol) :-
     Next is Col + 1,
     print_col_counts(Next, MaxCol).
 
+% --- Print Rows
 print_rows(Row, MaxRow, _) :-
     Row > MaxRow, !.
 print_rows(Row, MaxRow, Cols) :-
@@ -97,6 +103,7 @@ print_rows(Row, MaxRow, Cols) :-
     NextRow is Row + 1,
     print_rows(NextRow, MaxRow, Cols).
 
+% --- Print Columns
 print_columns(_, Col, MaxCol) :-
     Col > MaxCol, !.
 print_columns(Row, Col, MaxCol) :-
@@ -104,6 +111,7 @@ print_columns(Row, Col, MaxCol) :-
     NextCol is Col + 1,
     print_columns(Row, NextCol, MaxCol).
 
+% --- Print Cell
 print_cell(Row, Col) :-
 	cell(Row, Col, ship),
 	write(' S '), !.
@@ -129,10 +137,12 @@ h_count_ships_in_row(Row, Col, MaxCol, Acc, Total) :-
     Col =< MaxCol,
     NextCol is Col + 1,
     h_count_ships_in_row(Row, NextCol, MaxCol, Acc, Total).
+% --- Calculate the number of ship segments currently placed in a given row
 count_ships_in_row(Row, Total) :-
     grid_size(_, MaxCol),
     h_count_ships_in_row(Row, 1, MaxCol, 0, Total).
 
+% --- check if the actual count of ships (from the predicates above) matches the expected count defined by the row_count
 validate_rows(Current, MaxRow) :-
     Current > MaxRow, !.
 validate_rows(Current, MaxRow) :-
@@ -157,10 +167,12 @@ h_count_ships_in_col(Col, Row, MaxRow, Acc, Total) :-
     Row =< MaxRow,
     NextRow is Row + 1,
     h_count_ships_in_col(Col, NextRow, MaxRow, Acc, Total).
+% --- Calculate the number of ship segments currently placed in a given Column
 count_ships_in_col(Col, Total) :-
     grid_size(MaxRow, _),
     h_count_ships_in_col(Col, 1, MaxRow, 0, Total).
 
+% --- check if the actual count of ships (from the predicates above) matches the expected count defined by the col_count
 validate_cols(Current, MaxCol) :-
     Current > MaxCol, !.
 validate_cols(Current, MaxCol) :-
@@ -170,21 +182,23 @@ validate_cols(Current, MaxCol) :-
     Next is Current + 1,
     validate_cols(Next, MaxCol).
 
+% --- joins both the validate predicates
 validate_rows_and_cols :-
     grid_size(MaxRow, MaxCol),
     validate_rows(1, MaxRow),
     validate_cols(1, MaxCol).
 
+% --- defines the eight possible relative positions for an adjacent cell.
+adjacent_delta(-1, -1). % diagonally
+adjacent_delta(-1,  0). % horizontally
+adjacent_delta(-1,  1). % diagonally
+adjacent_delta( 0, -1). % vertically
+adjacent_delta( 0,  1). % vertically
+adjacent_delta( 1, -1). % diagonally
+adjacent_delta( 1,  0). % horizontally
+adjacent_delta( 1,  1). % diagonally
 
-adjacent_delta(-1, -1).
-adjacent_delta(-1,  0).
-adjacent_delta(-1,  1).
-adjacent_delta( 0, -1).
-adjacent_delta( 0,  1).
-adjacent_delta( 1, -1).
-adjacent_delta( 1,  0).
-adjacent_delta( 1,  1).
-
+% ---  finds a valid adjacent cell (R2, C2) for a given cell (Row, Col)
 adjacent_cell(Row, Col, AdjRow, AdjCol) :-
     adjacent_delta(DR, DC),
     AdjRow is Row + DR,
@@ -192,17 +206,22 @@ adjacent_cell(Row, Col, AdjRow, AdjCol) :-
     grid_size(MaxRow, MaxCol),
     AdjRow >= 1, AdjRow =< MaxRow,
     AdjCol >= 1, AdjCol =< MaxCol.
+
+% ---  succeeds if any adjacent cell contains a ship.
 adjacent_ship_exists(Row, Col) :-
     adjacent_cell(Row, Col, R2, C2),
     cell(R2, C2, ship).
 
+% --- succeeds if it can find any ship on the board that has another ship adjacent to it.
 invalid_ship_placement :-
     cell(R, C, ship),
     adjacent_ship_exists(R, C).
 
+% --- uses negation on the previous predicate
 check_no_adjacent_ships :-
     \+ invalid_ship_placement.
 
+% --- combines validation predicates
 validate_board :-
     validate_rows_and_cols,
     check_no_adjacent_ships.
