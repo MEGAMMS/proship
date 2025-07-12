@@ -64,6 +64,8 @@ print_board :-
     print_col_headers(1, Cols), nl,
     print_rows_with_counts(1, Rows, Cols),
     write('  '),
+    print_border(1,Cols),nl,
+    write('  '),
     print_col_counts(1, Cols), nl.
 
 % --- Print Columns' headers
@@ -94,6 +96,14 @@ print_col_counts(Col, MaxCol) :-
     Next is Col + 1,
     print_col_counts(Next, MaxCol).
 
+% --- Lower border
+print_border(Col, MaxCol) :-
+    Col > MaxCol, !.
+print_border(Col, MaxCol) :-
+    write(' '), write('-'), write(' '),
+    Next is Col + 1,
+    print_border(Next, MaxCol).
+
 % --- Print Rows
 print_rows(Row, MaxRow, _) :-
     Row > MaxRow, !.
@@ -114,10 +124,10 @@ print_columns(Row, Col, MaxCol) :-
 % --- Print Cell
 print_cell(Row, Col) :-
 	cell(Row, Col, ship),
-	write(' S '), !.
+	ansi_format([fg(cyan)], ' S ', []), !.
 print_cell(Row, Col) :-
 	cell(Row, Col, water),
-	write(' ~ '), !.
+	ansi_format([fg(blue)], ' ~ ', []), !.
 print_cell(_, _) :-
 	write(' . ').
 
@@ -148,7 +158,9 @@ validate_rows(Current, MaxRow) :-
 validate_rows(Current, MaxRow) :-
     row_count(Current, Expected),
     count_ships_in_row(Current, Actual),
-    Actual =:= Expected,
+    (Actual =:= Expected ->
+        true;
+        format('WRONG : Row ~w has ~w ship segments, expected ~w.~n', [Current, Actual, Expected]), fail),
     Next is Current + 1,
     validate_rows(Next, MaxRow).
 
@@ -178,7 +190,9 @@ validate_cols(Current, MaxCol) :-
 validate_cols(Current, MaxCol) :-
     col_count(Current, Expected),
     count_ships_in_col(Current, Actual),
-    Actual =:= Expected,
+    (Actual =:= Expected ->
+        true;
+        format('WRONG : Column ~w has ~w ship segments, expected ~w.~n', [Current, Actual, Expected]), fail),
     Next is Current + 1,
     validate_cols(Next, MaxCol).
 
@@ -225,3 +239,11 @@ check_no_adjacent_ships :-
 validate_board :-
     validate_rows_and_cols,
     check_no_adjacent_ships.
+
+
+% --- check the over all solution
+solve :-
+    validate_board,
+    write('Board is valid!'), nl.
+solve :-
+    write('Board is invalid.'), nl.
