@@ -3,16 +3,20 @@
 % =====================
 
 % Dynamic Predicates
-:- dynamic cell/3.
-:- dynamic row_count/2.
-:- dynamic col_count/2.
-:- dynamic grid_size/2.
+:- dynamic cell/3.  % cell(Row, Col, Type) -> Type is 'ship' or 'water'.
+:- dynamic row_count/2.  % row_count(Row, NumShips)
+:- dynamic col_count/2.  % col_count(Col, NumShips)
+:- dynamic grid_size/2.  % grid_size(Rows, Cols)
 
-% --- Ship Types (optional, used in more advanced solving)
+% --- Ship Types and their corresponding lengths ---
 ship_type(submarine, 1).
 ship_type(destroyer, 2).
 ship_type(cruiser, 3).
 ship_type(battleship, 4).
+
+% =====================
+% INITIALIZATION
+% =====================
 
 % --- Clear all facts (to reinitialize the puzzle)
 clear :-
@@ -51,11 +55,47 @@ load_game(2) :-
     assert(cell(3, 4, ship)),
     assert(cell(4, 1, ship)).
 
-% --- Initialize the puzzle with facts
-initialize(Game) :-
+% --- sample game 3
+load_game(3) :-
+    clear,
+    assert(grid_size(10, 10)),
+    % --- Number of ship segements per row ---
+    assert(row_count(1, 4)),
+    assert(row_count(2, 0)),
+    assert(row_count(3, 2)),
+    assert(row_count(4, 1)),
+    assert(row_count(5, 2)),
+    assert(row_count(6, 1)),
+    assert(row_count(7, 2)),
+    assert(row_count(8, 2)),
+    assert(row_count(9, 5)),
+    assert(row_count(10, 1)),
+    % --- Number of ship segements per row ---
+    assert(col_count(1, 1)),
+    assert(col_count(2, 1)),
+    assert(col_count(3, 6)),
+    assert(col_count(4, 1)),
+    assert(col_count(5, 4)),
+    assert(col_count(6, 1)),
+    assert(col_count(7, 3)),
+    assert(col_count(8, 1)),
+    assert(col_count(9, 1)),
+    assert(col_count(10, 1)),
+    % --- default config ---
+    assert(cell(4, 7, ship)),
+    assert(cell(5, 5, ship)),
+    assert(cell(7, 8, water)).
+
+% --- Initialize the puzzle with facts and print the board ---
+init(Game) :-
     clear,
     load_game(Game),
     print_board.
+
+
+% =====================
+% BOARD PRINTING
+% =====================
 
 % --- Print the current board state
 print_board :-
@@ -69,16 +109,14 @@ print_board :-
     print_col_counts(1, Cols), nl.
 
 % --- Print Columns' headers
-print_col_headers(Col, MaxCol) :-
-    Col > MaxCol, !.
+print_col_headers(Col, MaxCol) :- Col > MaxCol, !.
 print_col_headers(Col, MaxCol) :-
     write(' '), write(Col), write(' '),
     Next is Col + 1,
     print_col_headers(Next, MaxCol).
 
 % --- Print Rows with count
-print_rows_with_counts(Row, MaxRow, _) :-
-    Row > MaxRow, !.
+print_rows_with_counts(Row, MaxRow, _) :- Row > MaxRow, !.
 print_rows_with_counts(Row, MaxRow, Cols) :-
     write(Row), write(' '),
     print_columns(Row, 1, Cols),
@@ -88,25 +126,22 @@ print_rows_with_counts(Row, MaxRow, Cols) :-
     print_rows_with_counts(Next, MaxRow, Cols).
 
 % --- Print Columns' count
-print_col_counts(Col, MaxCol) :-
-    Col > MaxCol, !.
+print_col_counts(Col, MaxCol) :- Col > MaxCol, !.
 print_col_counts(Col, MaxCol) :-
     col_count(Col, Count),
     write(' '), write(Count), write(' '),
     Next is Col + 1,
     print_col_counts(Next, MaxCol).
 
-% --- Lower border
+% --- Print lower border ---
+print_border(Col, MaxCol) :- Col > MaxCol, !.
 print_border(Col, MaxCol) :-
-    Col > MaxCol, !.
-print_border(Col, MaxCol) :-
-    write(' '), write('-'), write(' '),
+    write('---'),
     Next is Col + 1,
     print_border(Next, MaxCol).
 
 % --- Print Rows
-print_rows(Row, MaxRow, _) :-
-    Row > MaxRow, !.
+print_rows(Row, MaxRow, _) :- Row > MaxRow, !.
 print_rows(Row, MaxRow, Cols) :-
     print_columns(Row, 1, Cols),
     nl,
@@ -114,8 +149,7 @@ print_rows(Row, MaxRow, Cols) :-
     print_rows(NextRow, MaxRow, Cols).
 
 % --- Print Columns
-print_columns(_, Col, MaxCol) :-
-    Col > MaxCol, !.
+print_columns(_, Col, MaxCol) :- Col > MaxCol, !.
 print_columns(Row, Col, MaxCol) :-
     print_cell(Row, Col),
     NextCol is Col + 1,
@@ -124,17 +158,19 @@ print_columns(Row, Col, MaxCol) :-
 % --- Print Cell
 print_cell(Row, Col) :-
 	cell(Row, Col, ship),
-	ansi_format([fg(cyan)], ' S ', []), !.
+	write(' S '), !.
 print_cell(Row, Col) :-
 	cell(Row, Col, water),
-	ansi_format([fg(blue)], ' ~ ', []), !.
+	write(' ~ '), !.
 print_cell(_, _) :-
 	write(' . ').
 
+% =====================
+% VALIDATION LOGIC
+% =====================
 
 % Base case: passed the last column
-h_count_ships_in_row(_Row, Col, MaxCol, Acc, Acc) :-
-    Col > MaxCol, !.
+h_count_ships_in_row(_Row, Col, MaxCol, Acc, Acc) :- Col > MaxCol, !.
 % Case 1: cell at (Row, Col) is ship
 h_count_ships_in_row(Row, Col, MaxCol, Acc, Total) :-
     Col =< MaxCol,
@@ -153,8 +189,7 @@ count_ships_in_row(Row, Total) :-
     h_count_ships_in_row(Row, 1, MaxCol, 0, Total).
 
 % --- check if the actual count of ships (from the predicates above) matches the expected count defined by the row_count
-validate_rows(Current, MaxRow) :-
-    Current > MaxRow, !.
+validate_rows(Current, MaxRow) :- Current > MaxRow, !.
 validate_rows(Current, MaxRow) :-
     row_count(Current, Expected),
     count_ships_in_row(Current, Actual),
@@ -165,8 +200,7 @@ validate_rows(Current, MaxRow) :-
     validate_rows(Next, MaxRow).
 
 % Base case: passed the last row
-h_count_ships_in_col(_Col, Row, MaxRow, Acc, Acc) :-
-    Row > MaxRow, !.
+h_count_ships_in_col(_Col, Row, MaxRow, Acc, Acc) :- Row > MaxRow, !.
 % Case 1: cell at (Row, Col) is ship
 h_count_ships_in_col(Col, Row, MaxRow, Acc, Total) :-
     Row =< MaxRow,
@@ -185,8 +219,7 @@ count_ships_in_col(Col, Total) :-
     h_count_ships_in_col(Col, 1, MaxRow, 0, Total).
 
 % --- check if the actual count of ships (from the predicates above) matches the expected count defined by the col_count
-validate_cols(Current, MaxCol) :-
-    Current > MaxCol, !.
+validate_cols(Current, MaxCol) :- Current > MaxCol, !.
 validate_cols(Current, MaxCol) :-
     col_count(Current, Expected),
     count_ships_in_col(Current, Actual),
@@ -235,15 +268,23 @@ invalid_ship_placement :-
 check_no_adjacent_ships :-
     \+ invalid_ship_placement.
 
+
 % --- combines validation predicates
 validate_board :-
     validate_rows_and_cols,
     check_no_adjacent_ships.
 
 
-% --- check the over all solution
+% =====================
+% SOLVER ENTRY POINT
+% =====================
+
 solve :-
-    validate_board,
-    write('Board is valid!'), nl.
-solve :-
-    write('Board is invalid.'), nl.
+    ( validate_board ->
+        write('SUCCESS: Board is valid and matches all constraints.'), nl
+    ;
+        write('FAILURE: Board is invalid.'), nl
+    ), !.
+
+
+
