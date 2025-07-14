@@ -86,6 +86,20 @@ load_game(3) :-
     assert(cell(5, 5, ship)),
     assert(cell(7, 8, water)).
 
+% --- sample game 4
+load_game(4) :-
+    clear,
+    assert(grid_size(3, 3)),
+    assert(row_count(1, 2)),
+    assert(row_count(2, 1)),
+    assert(row_count(3, 0)),
+    assert(col_count(1, 2)),
+    assert(col_count(2, 1)),
+    assert(col_count(3, 0)),
+    assert(cell(1, 1, ship)),
+    assert(cell(2, 1, ship)),
+    assert(cell(1, 2, ship)).
+
 % --- Initialize the puzzle with facts and print the board ---
 init(Game) :-
     clear,
@@ -169,6 +183,8 @@ print_cell(_, _) :-
 % VALIDATION LOGIC
 % =====================
 
+% --- 1. Validate Row and Column Counts ---
+
 % Base case: passed the last column
 h_count_ships_in_row(_Row, Col, MaxCol, Acc, Acc) :- Col > MaxCol, !.
 % Case 1: cell at (Row, Col) is ship
@@ -235,44 +251,28 @@ validate_rows_and_cols :-
     validate_rows(1, MaxRow),
     validate_cols(1, MaxCol).
 
-% --- defines the eight possible relative positions for an adjacent cell.
-adjacent_delta(-1, -1). % diagonally
-adjacent_delta(-1,  0). % horizontally
-adjacent_delta(-1,  1). % diagonally
-adjacent_delta( 0, -1). % vertically
-adjacent_delta( 0,  1). % vertically
-adjacent_delta( 1, -1). % diagonally
-adjacent_delta( 1,  0). % horizontally
-adjacent_delta( 1,  1). % diagonally
+% --- 2. Validate Ship Contacts (No touching ships) ---
 
-% ---  finds a valid adjacent cell (R2, C2) for a given cell (Row, Col)
-adjacent_cell(Row, Col, AdjRow, AdjCol) :-
-    adjacent_delta(DR, DC),
-    AdjRow is Row + DR,
-    AdjCol is Col + DC,
-    grid_size(MaxRow, MaxCol),
-    AdjRow >= 1, AdjRow =< MaxRow,
-    AdjCol >= 1, AdjCol =< MaxCol.
+check_ship_contacts :-
+    \+ ( cell(R, C, ship), (
+            % Check diagonal adjacency
+            (R1 is R - 1, C1 is C - 1, cell(R1, C1, ship));
+            (R1 is R - 1, C1 is C + 1, cell(R1, C1, ship));
+            (R1 is R + 1, C1 is C - 1, cell(R1, C1, ship));
+            (R1 is R + 1, C1 is C + 1, cell(R1, C1, ship));
+            % Check for "cross" formations (part of the same ship check)
+            % A segment cannot have both horizontal and vertical neighbors unless it's a single submarine.
+            ( (cell(R, C-1, ship) ; cell(R, C+1, ship)) , (cell(R-1, C, ship) ; cell(R+1, C, ship)))
+         )
+       ), !.
+check_ship_contacts :-
+    format('VALIDATION FAILED: Ships are touching illegally (diagonally or forming a cross).~n'),
+    fail.
 
-% ---  succeeds if any adjacent cell contains a ship.
-adjacent_ship_exists(Row, Col) :-
-    adjacent_cell(Row, Col, R2, C2),
-    cell(R2, C2, ship).
-
-% --- succeeds if it can find any ship on the board that has another ship adjacent to it.
-invalid_ship_placement :-
-    cell(R, C, ship),
-    adjacent_ship_exists(R, C).
-
-% --- uses negation on the previous predicate
-check_no_adjacent_ships :-
-    \+ invalid_ship_placement.
-
-
-% --- combines validation predicates
+% --- top level validation predicates
 validate_board :-
     validate_rows_and_cols,
-    check_no_adjacent_ships.
+    check_ship_contacts.
 
 
 % =====================
