@@ -123,12 +123,116 @@ load_game(4) :-
 	assert(cell(2, 1, ship)),
 	assert(cell(1, 2, ship)).
 
+% --- Load Sample Game 5 (5x5 grid) - Valid Fleet
+load_game(5) :-
+	clear,
+	assert(grid_size(5, 5)),
+	% --- Number of ship segments per row
+	assert(row_count(1, 1)),
+	assert(row_count(2, 2)),
+	assert(row_count(3, 1)),
+	assert(row_count(4, 1)),
+	assert(row_count(5, 1)),
+	% --- Number of ship segments per column
+	assert(col_count(1, 1)),
+	assert(col_count(2, 2)),
+	assert(col_count(3, 0)),
+	assert(col_count(4, 1)),
+	assert(col_count(5, 2)),
+	% Fleet definition
+	assert(fleet(destroyer, 1)),   % size 2
+	assert(fleet(submarine, 4)),  % size 1
+	assert(fleet(cruiser, 0)),
+	assert(fleet(battleship, 0)),
+	% Ship placements
+	assert(cell(1, 5, ship)),       % submarine
+	assert(cell(2, 1, ship)),       % destroyer start
+	assert(cell(2, 2, ship)),       % destroyer end
+	assert(cell(4, 2, ship)),       % submarine
+	assert(cell(3, 5, ship)),       % submarine
+	assert(cell(5, 4, ship)).       % submarine
+
+% --- Load Sample Game 6 (3x3 grid) - Diagonal ship (invalid)
+load_game(6) :-
+	clear,
+	assert(grid_size(3, 3)),
+	% --- Number of ship segments per row
+	assert(row_count(1, 1)),
+	assert(row_count(2, 1)),
+	assert(row_count(3, 0)),
+	% --- Number of ship segments per column
+	assert(col_count(1, 1)),
+	assert(col_count(2, 1)),
+	assert(col_count(3, 0)),
+	% Fleet definition
+	assert(fleet(submarine, 2)),
+	assert(fleet(destroyer, 0)),
+	assert(fleet(cruiser, 0)),
+	assert(fleet(battleship, 0)),
+	% Diagonally connected ships
+	assert(cell(1, 1, ship)),
+	assert(cell(2, 2, ship)).  % diagonal → should be invalid
+
+% --- Load Sample Game 7 (5x5 grid) - Too many destroyers
+load_game(7) :-
+	clear,
+	assert(grid_size(5, 5)),
+	% --- Number of ship segments per row
+	assert(row_count(1, 2)),
+	assert(row_count(2, 2)),
+	assert(row_count(3, 0)),
+	assert(row_count(4, 0)),
+	assert(row_count(5, 0)),
+	% --- Number of ship segments per column
+	assert(col_count(1, 1)),
+	assert(col_count(2, 1)),
+	assert(col_count(3, 0)),
+	assert(col_count(4, 1)),
+	assert(col_count(5, 1)),
+	% Fleet definition
+	assert(fleet(destroyer, 1)),  % only 1 allowed
+	assert(fleet(submarine, 0)),
+	assert(fleet(cruiser, 0)),
+	assert(fleet(battleship, 0)),
+	% Two destroyers (invalid)
+	assert(cell(1, 1, ship)),
+	assert(cell(1, 2, ship)),
+	assert(cell(2, 5, ship)),
+	assert(cell(2, 4, ship)).
+
+% --- Load Sample Game 8 (5x5) - Correct counts, but impossible fleet
+load_game(8) :-
+    clear,
+    assert(grid_size(5, 5)),
+    % --- Number of ship segments per row
+    assert(row_count(1, 2)),
+    assert(row_count(2, 0)),
+    assert(row_count(3, 2)),
+    assert(row_count(4, 0)),
+    assert(row_count(5, 1)),
+    % --- Number of ship segments per column
+    assert(col_count(1, 1)),
+    assert(col_count(2, 1)),
+    assert(col_count(3, 1)),
+    assert(col_count(4, 1)),
+    assert(col_count(5, 1)),
+    % --- Required Fleet (1 cruiser, 1 destroyer)
+    assert(fleet(cruiser, 1)),      % size 3
+    assert(fleet(destroyer, 1)),    % size 2
+    assert(fleet(battleship, 0)),
+    assert(fleet(submarine, 0)),
+    % --- Deceptive ship placements
+    assert(cell(1, 2, ship)),
+    assert(cell(1, 4, ship)),
+    assert(cell(3, 1, ship)),
+    assert(cell(3, 5, ship)),
+    assert(cell(5, 3, ship)).
+
 % --- Initialize the puzzle with facts and print the board ---
 init(Game) :-
 	clear,
 	load_game(Game),
 	print_board.
-
 
 % =====================
 % BOARD PRINTING
@@ -330,17 +434,11 @@ check_ship_contacts :-
 
 % --- 3. Validate Ship Shapes and Fleet Count ---
 
-% This is the main entry point for fleet validation.
+% Entry point to validate the fleet
 validate_fleet :-
-    % Copy ship cells to a temporary workspace to avoid modifying original data.
-    forall(cell(R, C, ship), assertz(temp_ship(R, C))),
-    % Recursively find and count ships, passing counters as accumulators.
-    count_all_ships(0, 0, 0, 0, Counts),
-    % Clean up the temporary data.
-    retractall(temp_ship(_, _)),
-    % Check the final counts against the fleet definition.
-    Counts = counts(B, C, D, S),
-    format('Found: ~w battleship(s), ~w cruiser(s), ~w destroyer(s), ~w submarine(s)~n', [B, C, D, S]), % debug
+	forall(cell(R, C, ship), assertz(temp_ship(R, C))),
+    count_all_ships(0, 0, 0, 0, counts(B, C, D, S)),
+	format('Found: ~w battleship(s), ~w cruiser(s), ~w destroyer(s), ~w submarine(s)~n', [B, C, D, S]), % debug
     fleet(battleship, ExpB), B =:= ExpB,
     fleet(cruiser,    ExpC), C =:= ExpC,
     fleet(destroyer,  ExpD), D =:= ExpD,
@@ -352,74 +450,43 @@ validate_fleet :-
     format('VALIDATION FAILED: The count of ship types does not match the defined fleet.~n'),
     fail.
 
-% Recursive predicate to find and count all ships on the board.
-% Base Case: No more ship segments left in our temporary workspace.
-count_all_ships(B, C, D, S, counts(B, C, D, S)) :- \+ temp_ship(_, _), !.
+% DFS-based collection and counting of all ships
+count_all_ships(B, C, D, S, counts(B, C, D, S)) :-
+    \+ temp_ship(_, _), !.
 count_all_ships(B_in, C_in, D_in, S_in, FinalCounts) :-
     temp_ship(R, C),
-    determine_direction(R, C, DR, DC),
-    ( (DR == fail; DC == fail) ->
-        % skip this cell, it's part of a ship already processed
-        retract(temp_ship(R, C)),
-        count_all_ships(B_in, C_in, D_in, S_in, FinalCounts)
-    ;
-        (
-            (DR =:= 0, DC =:= 0) ->  % Submarine
-                Length = 1,
-                retract(temp_ship(R, C))
-            ;
-                measure_length(R, C, DR, DC, Length),
-                retract_ship(R, C, DR, DC, Length)
-        ),
-        update_counts(Length, B_in, C_in, D_in, S_in, B_out, C_out, D_out, S_out),
-        count_all_ships(B_out, C_out, D_out, S_out, FinalCounts)
+    find_full_ship(R, C, Length),
+    update_counts(Length, B_in, C_in, D_in, S_in, B_out, C_out, D_out, S_out),
+    count_all_ships(B_out, C_out, D_out, S_out, FinalCounts).
+
+% Initiates DFS to retrieve full ship and its length
+find_full_ship(R, C, Length) :-
+    retract(temp_ship(R, C)),
+    dfs(R, C, 1, Length).
+
+% DFS traversal for connected ship cells
+dfs(R, C, Acc, Length) :-
+    (   adjacent_ship(R, C, R1, C1)
+    ->  retract(temp_ship(R1, C1)),
+        Acc1 is Acc + 1,
+        dfs(R1, C1, Acc1, Length)
+    ;   Length = Acc
     ).
 
-% Measures the length of a ship starting at (R,C) in direction (DR,DC).
-measure_length(R, C, _DR, _DC, 0) :-
-    \+ temp_ship(R, C), !. % Base case: If the cell is not a ship, its length is 0.
-measure_length(R, C, DR, DC, Length) :-
-    temp_ship(R, C), !,     % Condition: This cell must be a ship segment.
-    NextR is R + DR,
-    NextC is C + DC,
-    measure_length(NextR, NextC, DR, DC, SubLength),
-    Length is SubLength + 1.
+% Orthogonally adjacent ship cell
+adjacent_ship(R, C, R1, C1) :-
+    (
+        R1 is R - 1, C1 is C, temp_ship(R1, C1);
+        R1 is R + 1, C1 is C, temp_ship(R1, C1);
+        R1 is R,     C1 is C - 1, temp_ship(R1, C1);
+        R1 is R,     C1 is C + 1, temp_ship(R1, C1)
+    ), !.  % DFS: only explore one adjacent cell at a time
 
-% Retracts all segments of a ship from the temp_ship database.
-retract_ship(_, _, _, _, 0) :- !.
-retract_ship(R, C, DR, DC, N) :-
-    retract(temp_ship(R, C)),
-    NextR is R + DR,
-    NextC is C + DC,
-    N_new is N - 1,
-    retract_ship(NextR, NextC, DR, DC, N_new).
-
-% Updates the ship counters based on length.
-update_counts(4, B, C, D, S, B_new, C, D, S) :- B_new is B + 1, !.
-update_counts(3, B, C, D, S, B, C_new, D, S) :- C_new is C + 1, !.
-update_counts(2, B, C, D, S, B, C, D_new, S) :- D_new is D + 1, !.
-update_counts(1, B, C, D, S, B, C, D, S_new) :- S_new is S + 1, !.
-update_counts(_, B, C, D, S, B, C, D, S). % Should not happen with valid ships.
-
-% Horizontal ship head: has a ship to the right, but not to the left
-determine_direction(R, C, 0, 1) :-
-    temp_ship(R, C+1),
-    \+ temp_ship(R, C-1), !.
-
-% Vertical ship head: has a ship below, but not above
-determine_direction(R, C, 1, 0) :-
-    temp_ship(R+1, C),
-    \+ temp_ship(R-1, C), !.
-
-% Submarine: no ships in any adjacent orthogonal direction
-determine_direction(R, C, 0, 0) :-
-    \+ temp_ship(R, C+1),
-    \+ temp_ship(R, C-1),
-    \+ temp_ship(R+1, C),
-    \+ temp_ship(R-1, C), !.
-
-% Middle of a ship: skip
-determine_direction(_, _, fail, fail).  % fallback clause if direction is ambiguous
+% Updates the counts of ships based on length
+update_counts(4, B, C, D, S, B1, C, D, S) :- B1 is B + 1.
+update_counts(3, B, C, D, S, B, C1, D, S) :- C1 is C + 1.
+update_counts(2, B, C, D, S, B, C, D1, S) :- D1 is D + 1.
+update_counts(1, B, C, D, S, B, C, D, S1) :- S1 is S + 1.
 
 
 % --- top level validation predicates
