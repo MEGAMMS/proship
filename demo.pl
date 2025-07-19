@@ -55,25 +55,25 @@ load_game(2) :-
 	clear,
 	assert(grid_size(4, 4)),
 	% --- Number of ship segements per row
-	assert(row_count(1, 2)),
-	assert(row_count(2, 0)),
+	assert(row_count(1, 1)),
+	assert(row_count(2, 1)),
 	assert(row_count(3, 1)),
 	assert(row_count(4, 1)),
 	% --- Number of ship segements per column
-	assert(col_count(1, 1)),
-	assert(col_count(2, 2)),
+	assert(col_count(1, 0)),
+	assert(col_count(2, 3)),
 	assert(col_count(3, 0)),
 	assert(col_count(4, 1)),
     % Fleet definition
-    assert(fleet(destroyer, 1)),
-    assert(fleet(submarine, 2)),
-    assert(fleet(cruiser, 0)),
+    assert(fleet(destroyer, 0)),
+    assert(fleet(submarine, 1)),
+    assert(fleet(cruiser, 1)),
     assert(fleet(battleship, 0)),
 	% Ship placements
 	assert(cell(1, 2, ship)),
-	assert(cell(1, 3, ship)),
-	assert(cell(3, 4, ship)),
-	assert(cell(4, 1, ship)).
+	% assert(cell(1, 3, ship)),
+	% assert(cell(3, 4, ship)),
+	assert(cell(4, 4, ship)).
 
 % --- Load Sample Game 3 (10x10 grid)
 load_game(3) :-
@@ -101,6 +101,11 @@ load_game(3) :-
 	assert(col_count(8, 1)),
 	assert(col_count(9, 1)),
 	assert(col_count(10, 1)),
+	% Fleet definition
+    assert(fleet(submarine, 4)),
+    assert(fleet(destroyer, 3)),
+    assert(fleet(cruiser, 2)),
+    assert(fleet(battleship, 1)),
 	% Ship placements
 	assert(cell(4, 7, ship)),
 	assert(cell(5, 5, ship)),
@@ -112,15 +117,20 @@ load_game(4) :-
 	assert(grid_size(3, 3)),
 	% --- Number of ship segements per row
 	assert(row_count(1, 2)),
-	assert(row_count(2, 1)),
-	assert(row_count(3, 0)),
+	assert(row_count(2, 0)),
+	assert(row_count(3, 1)),
 	% --- Number of ship segements per column
 	assert(col_count(1, 2)),
 	assert(col_count(2, 1)),
 	assert(col_count(3, 0)),
+	% Fleet definition
+    assert(fleet(submarine, 1)),
+    assert(fleet(destroyer, 1)),
+    assert(fleet(cruiser, 0)),
+    assert(fleet(battleship, 0)),
 	% Ship placements
 	assert(cell(1, 1, ship)),
-	assert(cell(2, 1, ship)),
+	% assert(cell(2, 1, ship)),
 	assert(cell(1, 2, ship)).
 
 % --- Load Sample Game 5 (5x5 grid) - Valid Fleet
@@ -162,15 +172,15 @@ load_game(6) :-
 	assert(row_count(3, 0)),
 	% --- Number of ship segments per column
 	assert(col_count(1, 1)),
-	assert(col_count(2, 1)),
-	assert(col_count(3, 0)),
+	assert(col_count(2, 0)),
+	assert(col_count(3, 1)),
 	% Fleet definition
 	assert(fleet(submarine, 2)),
 	assert(fleet(destroyer, 0)),
 	assert(fleet(cruiser, 0)),
 	assert(fleet(battleship, 0)),
 	% Diagonally connected ships
-	assert(cell(1, 1, ship)),
+	% assert(cell(1, 1, ship)),
 	assert(cell(2, 2, ship)).  % diagonal → should be invalid
 
 % --- Load Sample Game 7 (5x5 grid) - Too many destroyers
@@ -190,14 +200,14 @@ load_game(7) :-
 	assert(col_count(4, 1)),
 	assert(col_count(5, 1)),
 	% Fleet definition
-	assert(fleet(destroyer, 1)),  % only 1 allowed
+	assert(fleet(destroyer, 2)), 
 	assert(fleet(submarine, 0)),
 	assert(fleet(cruiser, 0)),
 	assert(fleet(battleship, 0)),
 	% Two destroyers (invalid)
 	assert(cell(1, 1, ship)),
-	assert(cell(1, 2, ship)),
-	assert(cell(2, 5, ship)),
+	% assert(cell(1, 2, ship)),
+	% assert(cell(2, 5, ship)),
 	assert(cell(2, 4, ship)).
 
 % --- Load Sample Game 8 (5x5) - Correct counts, but impossible fleet
@@ -227,6 +237,33 @@ load_game(8) :-
     assert(cell(3, 1, ship)),
     assert(cell(3, 5, ship)),
     assert(cell(5, 3, ship)).
+
+% --- Load Sample Game 9 (6x6)
+load_game(9) :-
+    clear,
+    assert(grid_size(6, 6)),
+    % --- Number of ship segments per row
+    assert(row_count(1, 4)),
+    assert(row_count(2, 0)),
+    assert(row_count(3, 2)),
+    assert(row_count(4, 1)),
+    assert(row_count(5, 2)),
+    assert(row_count(6, 1)),
+    % --- Number of ship segments per column
+    assert(col_count(1, 1)),
+    assert(col_count(2, 0)),
+    assert(col_count(3, 4)),
+    assert(col_count(4, 0)),
+    assert(col_count(5, 3)),
+    assert(col_count(6, 2)),
+    % --- Required Fleet (1 cruiser, 1 destroyer)
+	assert(fleet(submarine, 3)),
+    assert(fleet(destroyer, 2)),    % size 2
+    assert(fleet(cruiser, 1)),      % size 3
+    assert(fleet(battleship, 0)),
+    % --- ship placements
+    assert(cell(1, 1, ship)),
+    assert(cell(4, 3, ship)).
 
 % --- Initialize the puzzle with facts and print the board ---
 init(Game) :-
@@ -507,5 +544,160 @@ solve :-
 		nl),
 	!.
 
+% =====================
+% BRUTEFORCE SOLVER
+% =====================
 
+% --- Top-level predicate to find a solution for a given game
+find_solution(Game) :-
+    init(Game),
+    write('--- Attempting to solve Game '), write(Game), write(' ---'), nl,
+    write('Initial state:'), nl,
+    print_board,nl,
+	pre_process_board, % Deduce obvious water placements first
+    write('State after pre-processing:'), nl,
+    print_board, nl,
+    find_unknown_cells(Unknowns),
+    ( solve_puzzle(Unknowns) ->
+        write('--- SOLUTION FOUND ---'), nl,
+        print_board
+    ;
+        write('--- NO SOLUTION FOUND ---'), nl
+    ).
 
+% --- Pre-computation: Fill in all logically required water cells
+pre_process_board :-
+    mark_remaining_water_after_ship_counts.
+
+% --- mark fullfilled Rows/Columns with water ---
+mark_remaining_water_after_ship_counts :-
+    grid_size(MaxR, MaxC),
+    mark_filled_rows(MaxR, MaxC),
+    mark_filled_cols(MaxR, MaxC).
+
+mark_filled_rows(MaxR, MaxC) :-
+    forall(
+        between(1, MaxR, Row),
+        (
+            row_count(Row, Expected),
+            count_ships_in_row(Row, Actual),
+            Expected =:= Actual
+        ->
+            mark_unknowns_as_water_in_row(Row, MaxC)
+        ; true
+        )
+    ).
+
+mark_unknowns_as_water_in_row(Row, MaxC) :-
+    forall(
+        between(1, MaxC, Col),
+        (
+            \+ cell(Row, Col, _)
+        -> assertz(cell(Row, Col, water))
+        ; true
+        )
+    ).
+
+mark_filled_cols(MaxR, MaxC) :-
+    forall(
+        between(1, MaxC, Col),
+        (
+            col_count(Col, Expected),
+            count_ships_in_col(Col, Actual),
+            Expected =:= Actual
+        ->
+            mark_unknowns_as_water_in_col(Col, MaxR)
+        ; true
+        )
+    ).
+
+mark_unknowns_as_water_in_col(Col, MaxR) :-
+    forall(
+        between(1, MaxR, Row),
+        (
+            \+ cell(Row, Col, _)
+        -> assertz(cell(Row, Col, water))
+        ; true
+        )
+    ).
+
+% --- Collect all cells that are not yet defined as 'ship' or 'water'
+find_unknown_cells(Unknowns) :-
+    grid_size(MaxR, MaxC),
+    findall((R,C),
+            (between(1, MaxR, R),
+             between(1, MaxC, C),
+             \+ cell(R, C, _)),
+            Unknowns).
+
+% --- Main backtracking predicate
+% Base case: No more unknown cells, the board is full. Check final validity.
+solve_puzzle([]) :- validate_board, !.
+
+% Recursive step: Try placing 'water' or 'ship' in the next unknown cell.
+solve_puzzle([(R,C)|Rest]) :-
+    % Option 1: Place 'water' if is a promising move
+	is_promising_water(R, C),
+    assertz(cell(R, C, water)),
+	format("Placing water at (~w, ~w):\n", [R, C]),
+    print_board,
+    ( solve_puzzle(Rest) ->
+        true
+    ;
+        % Backtrack if placing water didn't work
+        retract(cell(R, C, water)),
+        fail
+    ).
+
+solve_puzzle([(R,C)|Rest]) :-
+    % Option 2: Place 'ship', but only if it's a promising move
+    is_promising_ship(R, C),
+    assertz(cell(R, C, ship)),
+	format("Placing ship segment at (~w, ~w):\n", [R, C]),
+    print_board,
+    ( solve_puzzle(Rest) ->
+        true % If it leads to a solution, we're done.
+    ;
+        % Backtrack if placing ship didn't work
+        retract(cell(R, C, ship)),
+        fail
+    ).
+
+% --- Pruning predicates for the solver ---
+
+% A ship placement is promising if it doesn't violate counts or contact rules.
+is_promising_ship(R, C) :-
+    count_ships_in_row(R, RCount), row_count(R, RMax), RCount < RMax,
+    count_ships_in_col(C, CCount), col_count(C, CMax), CCount < CMax,
+    \+ illegal_touch(R, C).
+
+% A water placement is promising if it doesn't make it impossible to meet counts.
+is_promising_water(R, C) :-
+    row_count(R, RMax), count_ships_in_row(R, RCount), count_unknown_in_row(R, RUnknown),
+    RCount + (RUnknown - 1) >= RMax, % Ships placed + remaining unknowns must be enough
+    col_count(C, CMax), count_ships_in_col(C, CCount), count_unknown_in_col(C, CUnknown),
+    CCount + (CUnknown - 1) >= CMax.
+
+% --- Helpers for pruning checks ---
+count_unknown_in_row(R, Count) :-
+    grid_size(_, MaxC),
+    findall(C, (between(1, MaxC, C), \+ cell(R, C, _)), Cs),
+    length(Cs, Count).
+
+count_unknown_in_col(C, Count) :-
+    grid_size(MaxR, _),
+    findall(R, (between(1, MaxR, R), \+ cell(R, C, _)), Rs),
+    length(Rs, Count).
+
+% --- Check for illegal contacts around a potential new ship cell at (R,C)
+illegal_touch(R, C) :-
+    % Check for diagonal neighbors
+    ( R1 is R-1, C1 is C-1, cell(R1, C1, ship) );
+    ( R1 is R-1, C1 is C+1, cell(R1, C1, ship) );
+    ( R1 is R+1, C1 is C-1, cell(R1, C1, ship) );
+    ( R1 is R+1, C1 is C+1, cell(R1, C1, ship) ).
+illegal_touch(R, C) :-
+    % Check if placing a ship here would form an illegal corner.
+    % This happens if the new piece connects to existing pieces both vertically and horizontally.
+    (cell(R-1, C, ship) ; cell(R+1, C, ship)), % Is there a vertical neighbor?
+    (cell(R, C-1, ship) ; cell(R, C+1, ship)). % Is there a horizontal neighbor?
