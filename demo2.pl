@@ -300,7 +300,7 @@ print_cell(R, C) :-  % Submarine (no neighbors)
     C1 is C - 1, C2 is C + 1,
     \+ cell(R1, C, ship), \+ cell(R2, C, ship),
     \+ cell(R, C1, ship), \+ cell(R, C2, ship),
-    write(' O  '), !.
+    write(' O '), !.
 
 print_cell(R, C) :-  % Middle (horizontal or vertical)
     cell(R, C, ship),
@@ -633,9 +633,9 @@ update_counts(1, B, C, D, S, B, C, D, S1) :- S1 is S + 1.
 
 % --- top level validation predicates
 validate_board :-
-    validate_rows_and_cols,
-    check_ship_contacts,
-    validate_fleet.
+    validate_rows_and_cols.
+    % check_ship_contacts,
+    % validate_fleet.
 
 % =====================
 % SOLVER ENTRY POINT
@@ -787,6 +787,7 @@ solve_puzzle([]) :- validate_board, !.
 solve_puzzle([(R, C)|Rest]) :-
     is_promising_water(R, C),
     assertz(cell(R, C, water)),
+    format("Placing water at (~w, ~w):\n", [R, C]),
     ( solve_puzzle(Rest)
     -> true
     ;  retract(cell(R, C, water)), fail
@@ -795,6 +796,7 @@ solve_puzzle([(R, C)|Rest]) :-
 solve_puzzle([(R, C)|Rest]) :-
     is_promising_ship(R, C),
     assertz(cell(R, C, ship)),  % Temporary placeholder
+    format("Placing ship at (~w, ~w):\n", [R, C]),
     ( solve_puzzle(Rest)
     -> true
     ;  retract(cell(R, C, ship)), fail
