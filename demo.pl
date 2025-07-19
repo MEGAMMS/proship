@@ -265,6 +265,99 @@ load_game(9) :-
     assert(cell(1, 1, ship)),
     assert(cell(4, 3, ship)).
 
+% --- Load Sample Game 10 (6x6)
+load_game(10) :-
+    clear,
+    assert(grid_size(6, 6)),
+    % --- Number of ship segments per row
+    assert(row_count(1, 4)),
+    assert(row_count(2, 0)),
+    assert(row_count(3, 2)),
+    assert(row_count(4, 1)),
+    assert(row_count(5, 2)),
+    assert(row_count(6, 1)),
+    % --- Number of ship segments per column
+    assert(col_count(1, 1)),
+    assert(col_count(2, 0)),
+    assert(col_count(3, 4)),
+    assert(col_count(4, 0)),
+    assert(col_count(5, 3)),
+    assert(col_count(6, 2)),
+    % --- Required Fleet (1 cruiser, 1 destroyer)
+	assert(fleet(submarine, 3)),
+    assert(fleet(destroyer, 2)),    % size 2
+    assert(fleet(cruiser, 1)),      % size 3
+    assert(fleet(battleship, 0)),
+    % --- ship placements
+    assert(cell(3, 3, water)).
+
+% --- Load Sample Game 11 (8x8)
+load_game(11) :-
+    clear,
+    assert(grid_size(8, 8)),
+    % --- Number of ship segments per row
+    assert(row_count(1, 2)),
+    assert(row_count(2, 4)),
+    assert(row_count(3, 2)),
+    assert(row_count(4, 3)),
+    assert(row_count(5, 2)),
+    assert(row_count(6, 1)),
+    assert(row_count(7, 4)),
+    assert(row_count(8, 2)),
+    % --- Number of ship segments per column
+    assert(col_count(1, 5)),
+    assert(col_count(2, 0)),
+    assert(col_count(3, 5)),
+    assert(col_count(4, 1)),
+    assert(col_count(5, 2)),
+    assert(col_count(6, 1)),
+    assert(col_count(7, 2)),
+    assert(col_count(8, 4)),
+    % --- Required Fleet (1 cruiser, 1 destroyer)
+	assert(fleet(submarine, 4)),
+    assert(fleet(destroyer, 3)),    % size 2
+    assert(fleet(cruiser, 2)),      % size 3
+    assert(fleet(battleship, 1)),
+    % --- ship placements
+    assert(cell(5, 7, ship)),
+    assert(cell(1, 3, water)).
+
+% --- Load Sample Game 12 (10x10 grid)
+load_game(12) :-
+	clear,
+	assert(grid_size(10, 10)),
+	% --- Number of ship segements per row
+	assert(row_count(1, 3)),
+	assert(row_count(2, 2)),
+	assert(row_count(3, 3)),
+	assert(row_count(4, 3)),
+	assert(row_count(5, 1)),
+	assert(row_count(6, 1)),
+	assert(row_count(7, 2)),
+	assert(row_count(8, 1)),
+	assert(row_count(9, 3)),
+	assert(row_count(10, 1)),
+	% --- Number of ship segements per column
+	assert(col_count(1, 4)),
+	assert(col_count(2, 0)),
+	assert(col_count(3, 3)),
+	assert(col_count(4, 1)),
+	assert(col_count(5, 2)),
+	assert(col_count(6, 2)),
+	assert(col_count(7, 1)),
+	assert(col_count(8, 2)),
+	assert(col_count(9, 1)),
+	assert(col_count(10, 4)),
+	% Fleet definition
+    assert(fleet(submarine, 4)),
+    assert(fleet(destroyer, 3)),
+    assert(fleet(cruiser, 2)),
+    assert(fleet(battleship, 1)),
+	% Ship placements
+	assert(cell(4, 8, ship)),
+	assert(cell(6, 5, ship)),
+	assert(cell(1, 3, water)).
+
 % --- Initialize the puzzle with facts and print the board ---
 init(Game) :-
 	clear,
@@ -355,17 +448,55 @@ print_columns(Row, Col, MaxCol) :-
 	NextCol is Col + 1,
 	print_columns(Row, NextCol, MaxCol).
 
-% --- Print Cell
-print_cell(Row, Col) :-
-	cell(Row, Col, ship),
-	write(' S '),
-	!.
-print_cell(Row, Col) :-
-	cell(Row, Col, water),
-	write(' ~ '),
-	!.
+print_cell(R, C) :-
+    cell(R, C, water), write(' ~  '), !.
+
+print_cell(R, C) :-
+    \+ cell(R, C, _), write(' .  '), !.
+
+print_cell(R, C) :-  % Submarine (no neighbors)
+    cell(R, C, ship),
+    R1 is R - 1, R2 is R + 1,
+    C1 is C - 1, C2 is C + 1,
+    \+ cell(R1, C, ship), \+ cell(R2, C, ship),
+    \+ cell(R, C1, ship), \+ cell(R, C2, ship),
+    write(' O  '), !.
+
+print_cell(R, C) :-  % Middle (horizontal or vertical)
+    cell(R, C, ship),
+    R1 is R - 1, R2 is R + 1,
+    C1 is C - 1, C2 is C + 1,
+    ( (cell(R1, C, ship), cell(R2, C, ship));
+      (cell(R, C1, ship), cell(R, C2, ship)) ),
+    write(' #  '), !.
+
+print_cell(R, C) :-  % Left end
+    cell(R, C, ship),
+    C2 is C + 1, C1 is C - 1,
+    cell(R, C2, ship), \+ cell(R, C1, ship),
+    write(' <  '), !.
+
+print_cell(R, C) :-
+    cell(R, C, ship),
+    C1 is C - 1, C2 is C + 1,
+    cell(R, C1, ship), \+ cell(R, C2, ship),
+    write(' >  '), !.
+
+print_cell(R, C) :-  % Top end
+    cell(R, C, ship),
+    R2 is R + 1, R1 is R - 1,
+    cell(R2, C, ship), \+ cell(R1, C, ship),
+    write(' ^  '), !.
+
+print_cell(R, C) :-  % Bottom end
+    cell(R, C, ship),
+    R1 is R - 1, R2 is R + 1,
+    cell(R1, C, ship), \+ cell(R2, C, ship),
+    write(' v  '), !.
+
 print_cell(_, _) :-
-	write(' . ').
+    write(' S  ').  % fallback
+
 
 % =====================
 % VALIDATION LOGIC
@@ -639,8 +770,8 @@ solve_puzzle([(R,C)|Rest]) :-
     % Option 1: Place 'water' if is a promising move
 	is_promising_water(R, C),
     assertz(cell(R, C, water)),
-	format("Placing water at (~w, ~w):\n", [R, C]),
-    print_board,
+	% format("Placing water at (~w, ~w):\n", [R, C]),
+    % print_board,
     ( solve_puzzle(Rest) ->
         true
     ;
@@ -653,8 +784,8 @@ solve_puzzle([(R,C)|Rest]) :-
     % Option 2: Place 'ship', but only if it's a promising move
     is_promising_ship(R, C),
     assertz(cell(R, C, ship)),
-	format("Placing ship segment at (~w, ~w):\n", [R, C]),
-    print_board,
+	% format("Placing ship segment at (~w, ~w):\n", [R, C]),
+    % print_board,
     ( solve_puzzle(Rest) ->
         true % If it leads to a solution, we're done.
     ;
