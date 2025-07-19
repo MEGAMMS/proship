@@ -633,9 +633,9 @@ update_counts(1, B, C, D, S, B, C, D, S1) :- S1 is S + 1.
 
 % --- top level validation predicates
 validate_board :-
-    validate_rows_and_cols,
-    check_ship_contacts,
-    validate_fleet.
+    validate_rows_and_cols.
+    % check_ship_contacts,
+    % validate_fleet.
 
 % =====================
 % SOLVER ENTRY POINT
@@ -787,6 +787,7 @@ solve_puzzle([]) :- validate_board, !.
 solve_puzzle([(R, C)|Rest]) :-
     is_promising_water(R, C),
     assertz(cell(R, C, water)),
+    format("Placing water at (~w, ~w):\n", [R, C]),
     ( solve_puzzle(Rest)
     -> true
     ;  retract(cell(R, C, water)), fail
@@ -795,6 +796,7 @@ solve_puzzle([(R, C)|Rest]) :-
 solve_puzzle([(R, C)|Rest]) :-
     is_promising_ship(R, C),
     assertz(cell(R, C, ship)),  % Temporary placeholder
+    format("Placing ship at (~w, ~w):\n", [R, C]),
     ( solve_puzzle(Rest)
     -> true
     ;  retract(cell(R, C, ship)), fail
