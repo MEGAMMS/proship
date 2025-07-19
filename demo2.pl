@@ -41,11 +41,11 @@ load_game(1) :-
 	assert(col_count(1, 1)),
 	assert(col_count(2, 1)),
 	assert(col_count(3, 0)),
-    % Fleet definition
-    assert(fleet(destroyer, 1)),
-    assert(fleet(submarine, 0)), % Explicitly state zero for other types
-    assert(fleet(cruiser, 0)),
-    assert(fleet(battleship, 0)),
+	% Fleet definition
+	assert(fleet(destroyer, 1)),
+	assert(fleet(submarine, 0)), % Explicitly state zero for other types
+	assert(fleet(cruiser, 0)),
+	assert(fleet(battleship, 0)),
 	% Ship placements
 	assert(cell(1, 1, ship_left)),
 	assert(cell(1, 2, ship_right)).
@@ -64,11 +64,11 @@ load_game(2) :-
 	assert(col_count(2, 3)),
 	assert(col_count(3, 1)),
 	assert(col_count(4, 1)),
-    % Fleet definition
-    assert(fleet(destroyer, 0)),
-    assert(fleet(submarine, 1)),
-    assert(fleet(cruiser, 1)),
-    assert(fleet(battleship, 0)),
+	% Fleet definition
+	assert(fleet(destroyer, 0)),
+	assert(fleet(submarine, 1)),
+	assert(fleet(cruiser, 1)),
+	assert(fleet(battleship, 0)),
 	% Ship placements
 	assert(cell(1, 2, ship_up)),
 	assert(cell(2, 2, ship_mid)),
@@ -103,11 +103,11 @@ load_game(3) :-
 	assert(col_count(8, 1)),
 	assert(col_count(9, 1)),
 	assert(col_count(10, 1)),
-	% Fleet definition
-    assert(fleet(submarine, 4)),
-    assert(fleet(destroyer, 3)),
-    assert(fleet(cruiser, 2)),
-    assert(fleet(battleship, 1)),
+	    % Fleet definition
+	assert(fleet(submarine, 4)),
+	assert(fleet(destroyer, 3)),
+	assert(fleet(cruiser, 2)),
+	assert(fleet(battleship, 1)),
 	% Ship placements
 	assert(cell(4, 7, submarine)),
 	assert(cell(5, 5, ship_up)),
@@ -159,7 +159,7 @@ load_game(9) :-
     assert(col_count(5, 3)),
     assert(col_count(6, 2)),
     % --- Required Fleet (1 cruiser, 1 destroyer)
-	assert(fleet(submarine, 3)),
+    assert(fleet(submarine, 3)),
     assert(fleet(destroyer, 2)),    % size 2
     assert(fleet(cruiser, 1)),      % size 3
     assert(fleet(battleship, 0)),
@@ -259,40 +259,40 @@ print_columns(Row, Col, MaxCol) :-
 
 print_cell(R, C) :-
     cell(R, C, water),
-    write(' ~  '), !.
+    write(' ~ '), !.
 
 print_cell(R, C) :-
     \+ cell(R, C, _),
-    write(' .  '), !.
+    write(' . '), !.
 
 % Print based on ship segment type
 print_cell(R, C) :-
     cell(R, C, submarine),
-    write(' O  '), !.
+    write(' O '), !.
 
 print_cell(R, C) :-
     cell(R, C, ship_up),
-    write(' ^  '), !.
+    write(' ^ '), !.
 
 print_cell(R, C) :-
     cell(R, C, ship_down),
-    write(' v  '), !.
+    write(' v '), !.
 
 print_cell(R, C) :-
     cell(R, C, ship_left),
-    write(' <  '), !.
+    write(' < '), !.
 
 print_cell(R, C) :-
     cell(R, C, ship_right),
-    write(' >  '), !.
+    write(' > '), !.
 
 print_cell(R, C) :-
     cell(R, C, ship_mid),
-    write(' #  '), !.
+    write(' # '), !.
 
 % Fallback for unknown segment types
 print_cell(_, _) :-
-    write(' S  ').
+    write(' S ').
 
 print_cell(R, C) :-  % Submarine (no neighbors)
     cell(R, C, ship),
@@ -300,7 +300,7 @@ print_cell(R, C) :-  % Submarine (no neighbors)
     C1 is C - 1, C2 is C + 1,
     \+ cell(R1, C, ship), \+ cell(R2, C, ship),
     \+ cell(R, C1, ship), \+ cell(R, C2, ship),
-    write(' O  '), !.
+    write(' O '), !.
 
 print_cell(R, C) :-  % Middle (horizontal or vertical)
     cell(R, C, ship),
@@ -308,31 +308,31 @@ print_cell(R, C) :-  % Middle (horizontal or vertical)
     C1 is C - 1, C2 is C + 1,
     ( (cell(R1, C, ship), cell(R2, C, ship));
       (cell(R, C1, ship), cell(R, C2, ship)) ),
-    write(' #  '), !.
+    write(' # '), !.
 
 print_cell(R, C) :-  % Left end
     cell(R, C, ship),
     C2 is C + 1, C1 is C - 1,
     cell(R, C2, ship), \+ cell(R, C1, ship),
-    write(' <  '), !.
+    write(' < '), !.
 
 print_cell(R, C) :-
     cell(R, C, ship),
     C1 is C - 1, C2 is C + 1,
     cell(R, C1, ship), \+ cell(R, C2, ship),
-    write(' >  '), !.
+    write(' > '), !.
 
 print_cell(R, C) :-  % Top end
     cell(R, C, ship),
     R2 is R + 1, R1 is R - 1,
     cell(R2, C, ship), \+ cell(R1, C, ship),
-    write(' ^  '), !.
+    write(' ^ '), !.
 
 print_cell(R, C) :-  % Bottom end
     cell(R, C, ship),
     R1 is R - 1, R2 is R + 1,
     cell(R1, C, ship), \+ cell(R2, C, ship),
-    write(' v  '), !.
+    write(' v '), !.
 
 % =====================
 % VALIDATION LOGIC
