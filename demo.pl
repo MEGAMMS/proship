@@ -785,33 +785,45 @@ count_ships_in_col(Col, Total) :-
     grid_size(MaxRow, _),
     h_count_ships_in_col(Col, 1, MaxRow, 0, Total).
 
-% --- Validate all rows ---
+% Base case: when current row exceeds max
 validate_rows(Current, MaxRow) :-
-    Current > MaxRow,
-    !.
+    Current > MaxRow.
+
+% Recursive case: row count matches
 validate_rows(Current, MaxRow) :-
     row_count(Current, Expected),
     count_ships_in_row(Current, Actual),
-    (Actual =:= Expected ->
-        true;
-        debug_format('WRONG : Row ~w has ~w ship segments, expected ~w.~n', [Current, Actual, Expected]),
-        fail),
+    Actual =:= Expected,
     Next is Current + 1,
     validate_rows(Next, MaxRow).
 
-% --- check if the actual count of ships (from the predicates above) matches the expected count defined by the col_count
+% Recursive case: row count mismatch
+validate_rows(Current, _) :-
+    row_count(Current, Expected),
+    count_ships_in_row(Current, Actual),
+    Actual =\= Expected,
+    debug_format('WRONG : Row ~w has ~w ship segments, expected ~w.~n', [Current, Actual, Expected]),
+    fail.
+
+% Base case: all columns checked
 validate_cols(Current, MaxCol) :-
-	Current > MaxCol,
-	!.
+    Current > MaxCol.
+
+% Recursive case: column count matches
 validate_cols(Current, MaxCol) :-
-	col_count(Current, Expected),
-	count_ships_in_col(Current, Actual),
-	(Actual =:= Expected ->
-	true;
-	debug_format('WRONG : Column ~w has ~w ship segments, expected ~w.~n', [Current, Actual, Expected]),
-		fail),
-	Next is Current + 1,
-	validate_cols(Next, MaxCol).
+    col_count(Current, Expected),
+    count_ships_in_col(Current, Actual),
+    Actual =:= Expected,
+    Next is Current + 1,
+    validate_cols(Next, MaxCol).
+
+% Recursive case: column count mismatch
+validate_cols(Current, _) :-
+    col_count(Current, Expected),
+    count_ships_in_col(Current, Actual),
+    Actual =\= Expected,
+    debug_format('WRONG : Column ~w has ~w ship segments, expected ~w.~n', [Current, Actual, Expected]),
+    fail.
 
 % --- joins both the validate predicates
 validate_rows_and_cols :-
@@ -886,18 +898,6 @@ validate_board :-
     check_ship_contacts,
     validate_fleet.
 
-% =====================
-% SOLVED CHECKER
-% =====================
-
-solved :-
-	(validate_board ->
-	write('SUCCESS: Board is valid and matches all constraints.'),
-		nl;
-	write('FAILURE: Board is invalid.'),
-		nl),
-	!.
-
 % --- Updated illegal_touch logic ---
 diagonal_delta(-1, -1).
 diagonal_delta(-1,  1).
@@ -924,13 +924,13 @@ solve(Game) :-
     write('State after pre-processing:'), nl,
     print_board, nl,
     find_unknown_cells(Unknowns),
-    ( solve_puzzle(Unknowns) ->
-        relabel_all_ships,
-        write('--- SOLUTION FOUND ---'), nl,
-        print_board
-    ;
-        write('--- NO SOLUTION FOUND ---'), nl
-    ).
+    solve_puzzle(Unknowns),
+    relabel_all_ships,
+    write('--- SOLUTION FOUND ---'), nl,
+    print_board.
+
+solve(_) :-
+    write('--- NO SOLUTION FOUND ---'), nl.
 
 % --- Pre-processing ---
 pre_process_board :-
@@ -943,49 +943,39 @@ mark_remaining_water_after_ship_counts :-
     mark_filled_rows(MaxR, MaxC),
     mark_filled_cols(MaxR, MaxC).
 
+% Mark rows as filled if all ships are placed
 mark_filled_rows(MaxR, MaxC) :-
-    forall(
-        between(1, MaxR, Row),
-        (
-            row_count(Row, Expected),
-            count_ships_in_row(Row, Actual),
-            Expected =:= Actual
-        ->  mark_unknowns_as_water_in_row(Row, MaxC)
-        ;   true
-        )
-    ).
+    between(1, MaxR, Row),
+    row_count(Row, Expected),
+    count_ships_in_row(Row, Actual),
+    Expected =:= Actual,
+    mark_unknowns_as_water_in_row(Row, MaxC),
+    fail.
+mark_filled_rows(_, _).
 
 mark_unknowns_as_water_in_row(Row, MaxC) :-
-    forall(
-        between(1, MaxC, Col),
-        (
-            \+ cell(Row, Col, _)
-        ->  assertz(cell(Row, Col, water))
-        ;   true
-        )
-    ).
+    between(1, MaxC, Col),
+    \+ cell(Row, Col, _),
+    assertz(cell(Row, Col, water)),
+    fail.
+mark_unknowns_as_water_in_row(_, _).
 
+% Mark columns as filled if all ships are placed
 mark_filled_cols(MaxR, MaxC) :-
-    forall(
-        between(1, MaxC, Col),
-        (
-            col_count(Col, Expected),
-            count_ships_in_col(Col, Actual),
-            Expected =:= Actual
-        ->  mark_unknowns_as_water_in_col(Col, MaxR)
-        ;   true
-        )
-    ).
+    between(1, MaxC, Col),
+    col_count(Col, Expected),
+    count_ships_in_col(Col, Actual),
+    Expected =:= Actual,
+    mark_unknowns_as_water_in_col(Col, MaxR),
+    fail.
+mark_filled_cols(_, _).
 
 mark_unknowns_as_water_in_col(Col, MaxR) :-
-    forall(
-        between(1, MaxR, Row),
-        (
-            \+ cell(Row, Col, _)
-        ->  assertz(cell(Row, Col, water))
-        ;   true
-        )
-    ).
+    between(1, MaxR, Row),
+    \+ cell(Row, Col, _),
+    assertz(cell(Row, Col, water)),
+    fail.
+mark_unknowns_as_water_in_col(_, _).
 
 % --- Fill water around all predefined ship segments on the board
 fill_water_around_all_ships :-
