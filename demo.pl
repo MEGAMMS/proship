@@ -45,6 +45,18 @@ is_ship_cell(R, C) :-
     cell(R, C, Type),
     ship_segment(Type).
 
+% All 4 orthogonal directions
+neighbor_delta(-1, 0).  % up
+neighbor_delta(1, 0).   % down
+neighbor_delta(0, -1).  % left
+neighbor_delta(0, 1).   % right
+
+% --- Dignonal Deltas ---
+diagonal_delta(-1, -1).
+diagonal_delta(-1,  1).
+diagonal_delta( 1, -1).
+diagonal_delta( 1,  1).
+
 % =====================
 % INITIALIZATION
 % =====================
@@ -290,7 +302,7 @@ load_game(9) :-
     assert(fleet(battleship, 0)),
     % --- ship placements
     assert(cell(1, 1, submarine)),
-    assert(cell(4, 3, submarine)).
+    assert(cell(4, 3, ship_up)).
 
 % --- Load Sample Game 10 (6x6)
 load_game(10) :-
@@ -381,8 +393,8 @@ load_game(12) :-
     assert(fleet(cruiser, 2)),
     assert(fleet(battleship, 1)),
 	% Ship placements
-	assert(cell(4, 8, submarine)),
-	assert(cell(6, 5, submarine)),
+	assert(cell(4, 8, ship_mid)),
+	assert(cell(6, 5, ship_up)),
 	assert(cell(1, 3, water)).
 
 % --- Load Sample Game 13 (full 3x3 grid)
@@ -485,14 +497,14 @@ load_game(17) :-
 	% --- Number of ship segments per row
 	assert(row_count(1, 2)),
 	assert(row_count(2, 1)),
-	assert(row_count(3, 1)),
-	assert(row_count(4, 1)),
+	assert(row_count(3, 0)),
+	assert(row_count(4, 0)),
 	assert(row_count(5, 0)),
 	assert(row_count(6, 0)),
 	% --- Number of ship segments per column
 	assert(col_count(1, 1)),
 	assert(col_count(2, 1)),
-	assert(col_count(3, 1)),
+	assert(col_count(3, 0)),
 	assert(col_count(4, 1)),
 	assert(col_count(5, 0)),
 	assert(col_count(6, 0)),
@@ -503,7 +515,7 @@ load_game(17) :-
     assert(fleet(battleship, 0)),
 	% Partial ship placements - just segments
 	assert(cell(1, 1, ship_left)),      % destroyer segment
-	assert(cell(2, 3, submarine)).      % one submarine
+	assert(cell(2,4 , submarine)).      % one submarine
 
 % --- Load Sample Game 18 (7x7 grid) - Partial battleship
 load_game(18) :-
@@ -840,7 +852,7 @@ has_illegal_touch :-
 check_ship_contacts :-
     \+ has_illegal_touch, !.
 check_ship_contacts :-
-    debug_format('VALIDATION FAILED: Ships are touching illegally (diagonally or forming a cross).~n'),
+    format('VALIDATION FAILED: Ships are touching illegally (diagonally or forming a cross).~n'),
     fail.
 
 % --- 3. Validate Ship Shapes and Fleet Count ---
@@ -898,17 +910,29 @@ validate_board :-
     check_ship_contacts,
     validate_fleet.
 
-% --- Updated illegal_touch logic ---
-diagonal_delta(-1, -1).
-diagonal_delta(-1,  1).
-diagonal_delta( 1, -1).
-diagonal_delta( 1,  1).
-
 illegal_touch(R, C) :-
     diagonal_delta(DR, DC),
     R1 is R + DR,
     C1 is C + DC,
     is_ship_cell(R1, C1).
+illegal_touch(R, C) :-
+    % Illegal 'cross' connection
+    (is_ship_cell(R-1, C); is_ship_cell(R+1, C)),
+    (is_ship_cell(R, C-1); is_ship_cell(R, C+1)).
+
+% =====================
+% SOLVED CHECKER
+% =====================
+
+solved :-
+    validate_board,
+    write('SUCCESS: Board is valid and matches all constraints.'),
+    nl,
+    !.
+solved :-
+    write('FAILURE: Board is invalid.'),
+    nl,
+    !.
 
 % =====================
 % BRUTEFORCE SOLVER
@@ -927,7 +951,7 @@ solve(Game) :-
     solve_puzzle(Unknowns),
     relabel_all_ships,
     write('--- SOLUTION FOUND ---'), nl,
-    print_board.
+    print_board,!.
 
 solve(_) :-
     write('--- NO SOLUTION FOUND ---'), nl.
@@ -991,14 +1015,8 @@ fill_water_around(R, C, Type) :-
 
 % --- 1. Fill diagonals (common to all ship segments)
 fill_diagonals(R, C) :-
-    forall(diagonal_offset(DR, DC),
+    forall(diagonal_delta(DR, DC),
            (R1 is R + DR, C1 is C + DC, try_mark_water(R1, C1))).
-
-% Diagonal deltas
-diagonal_offset(-1, -1).
-diagonal_offset(-1, 1).
-diagonal_offset(1, -1).
-diagonal_offset(1, 1).
 
 % --- 2. Fill ends depending on ship segment type
 fill_ends(R, C, submarine) :-
@@ -1030,15 +1048,7 @@ fill_ends(R, C, ship_right) :-
     R2 is R + 1, try_mark_water(R2, C),  % below
     C1 is C + 1, try_mark_water(R, C1).  % right
 
-fill_ends(_, _, ship_mid) :-
-    % Do nothing: surrounded by other segments
-    true.
-
-% All 4 orthogonal directions
-neighbor_delta(-1, 0).  % up
-neighbor_delta(1, 0).   % down
-neighbor_delta(0, -1).  % left
-neighbor_delta(0, 1).   % right
+fill_ends(_, _, ship_mid).
 
 % --- Safe marking of a cell as water (only if not already filled)
 try_mark_water(R, C) :-
