@@ -1102,8 +1102,7 @@ count_unknown_in_col(C, Count) :-
 
 % --- Relabel all generic ship cells to the correct segment type ---
 relabel_all_ships :-
-    findall((R, C), cell(R, C, ship), ShipCells),
-    maplist(relabel_ship_cell, ShipCells).
+    forall(cell(R, C, ship), relabel_ship_cell((R, C))).
 
 relabel_ship_cell((R, C)) :-
     determine_ship_segment(R, C, Segment),
