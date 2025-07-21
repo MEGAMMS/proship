@@ -218,9 +218,9 @@ load_game(6) :-
 	assert(fleet(submarine, 2)),
 	assert(fleet(destroyer, 0)),
 	assert(fleet(cruiser, 0)),
-	assert(fleet(battleship, 0)),
+	assert(fleet(battleship, 0)).
 	% Diagonally connected ships
-	assert(cell(2, 2, submarine)).
+	% assert(cell(2, 2, submarine)).
 
 % --- Load Sample Game 7 (5x5 grid) - Too many destroyers
 load_game(7) :-
@@ -393,8 +393,7 @@ load_game(12) :-
     assert(fleet(cruiser, 2)),
     assert(fleet(battleship, 1)),
 	% Ship placements
-	assert(cell(4, 8, ship_mid)),
-	assert(cell(6, 5, ship_up)),
+	assert(cell(6, 5, submarine)),
 	assert(cell(1, 3, water)).
 
 % --- Load Sample Game 13 (full 3x3 grid)
@@ -593,6 +592,7 @@ load_game(20) :-
 	assert(cell(1, 5, submarine)),      % one submarine
 	assert(cell(2, 1, ship_left)).      % cruiser segment
 
+% ___________________________________HADI___________________________________________
 % --- Initialize the puzzle with facts and print the board ---
 init(Game) :-
 	clear,
@@ -744,6 +744,8 @@ print_cell(_, _) :-
 % =====================
 % VALIDATION LOGIC
 % =====================
+
+% ___________________________________GHALEB___________________________________________
 
 % --- 1. Validate Row and Column Counts ---
 
@@ -915,10 +917,6 @@ illegal_touch(R, C) :-
     R1 is R + DR,
     C1 is C + DC,
     is_ship_cell(R1, C1).
-illegal_touch(R, C) :-
-    % Illegal 'cross' connection
-    (is_ship_cell(R-1, C); is_ship_cell(R+1, C)),
-    (is_ship_cell(R, C-1); is_ship_cell(R, C+1)).
 
 % =====================
 % SOLVED CHECKER
